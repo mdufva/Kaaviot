@@ -5,26 +5,32 @@ String inString = "Tyhjä";  // Input string from serial port
 int lf = 10;      // ASCII linefeed 
 
 PGraphics kaavio; //tähän piirretään
-int zoom = 0;  //nollataan palkkien sijainti
+int x_0 = 0;  //nollataan palkkien sijainti
 int vali = 50; //palkkien väli
 float kerroin = 1;
 Table data = loadTable("data3.csv","header");
 
 int leveys = 800;
 int korkeus = 600;
-int leveysMax = data.getRowCount()*vali;
+int leveysMax = (data.getRowCount()-1)*vali;
 
 int marg = 20;
-float l = leveys - 2*marg;
-int alkuz = zoom;
+float zoom = leveys - 2*marg;
+
+int lapinakyvyys = 0;
+boolean fadeIn = true;
+boolean fadeOut = false;
 
 int keissi = 1;
 
-color tausta = color(200,200,200);
+color tausta = color(255,255,255);
 color viiva = color(0,0,0);
 color viiva2 = color(255,0,0);
 color tayte = color(255,255,255);
 color teksti = color(0,0,0);
+
+boolean zoomIn = true;
+boolean zoomOut = false;
 
 void setup() {
   size(leveys, korkeus);
@@ -37,7 +43,7 @@ void setup() {
 }
 
 void draw() {
-    if(inString.equals("66006BEEEC0F")) {
+  if(inString.equals("66006BEEEC0F")) {
     keissi = 1;
   } else if(inString.equals("66006C34625C")) {
     keissi = 2;
@@ -46,9 +52,11 @@ void draw() {
   }
   switch(keissi) {
     case 0:
+      marg = 0;
       piirraViiva();
       break;
     case 1:
+      marg = 20;
       piirraPalkit(1);
       piirraTeksti();  
       break;
@@ -67,26 +75,52 @@ void draw() {
   stroke(tausta);
   rect(0,0,width,height);
   
-
-  if(l < leveysMax && zoom >= alkuz) {
-    image(kaavio,marg,0+(korkeus-l/leveysMax*korkeus),l,l/leveysMax*korkeus);
-    l = l+3;
-  } else if(zoom < -(leveysMax)) {
-    zoom = alkuz;
-    l = leveys - 2*marg;
-    if (keissi >= 3) {
-      keissi = 1;
+  if(fadeIn) {
+    tint(tausta,lapinakyvyys);
+    image(kaavio,marg + x_0,0+(korkeus-zoom/leveysMax*korkeus),zoom,zoom/leveysMax*korkeus);
+    if(lapinakyvyys >= 255) {
+      fadeIn = false;
     } else {
-      keissi++;
-    }    
-    nollaaKaavio();
+      lapinakyvyys++;
+    }
+  } else if(fadeOut) {
+    tint(tausta,lapinakyvyys);
+    image(kaavio,marg + x_0,0+(korkeus-zoom/leveysMax*korkeus),zoom,zoom/leveysMax*korkeus);
+    if(lapinakyvyys <= 0) {
+      fadeOut = false;
+      fadeIn = true;
+    } else {
+      lapinakyvyys--;
+    }
+    
+  } else {  
+  if (zoomIn) {
+    image(kaavio,marg + x_0,0+(korkeus-zoom/leveysMax*korkeus),zoom,zoom/leveysMax*korkeus);
+    if(zoom >= leveysMax) {
+      zoomIn = false;
+    } else {
+      zoom = zoom + 3;
+    }
+  } else if(zoomOut) {
+    image(kaavio,marg + x_0,0+(korkeus-zoom/leveysMax*korkeus),zoom,zoom/leveysMax*korkeus);
+    if(zoom <= (leveys - 2*marg)) {
+      zoomOut = false;
+      zoomIn = true;
+      fadeOut = true;
+    } else {
+      zoom = zoom - 3;
+      x_0 = x_0 + 3;
+    }
   } else {
-    image(kaavio,marg + zoom,0);    
-    zoom--;    
+    image(kaavio,marg + x_0,0);
+    if (x_0 <= -(leveysMax-leveys+marg)) {
+      zoomOut = true;
+    } else {
+      x_0--;    
+    }
   }
-
-
-//image(kaavio,0,0);
+  }
+  
 
 }
 
@@ -145,9 +179,10 @@ void piirraXY() {
 }
 
 void piirraViiva() {
-  kaavio.fill(tausta);
   kaavio.beginDraw();
   kaavio.beginShape();
+      kaavio.fill(tausta);
+
     for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
     TableRow row1 = data.getRow(i); //otetaan rivi
     //Piirretään viiva
