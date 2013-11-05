@@ -25,14 +25,16 @@ boolean tauko = false;
 
 int keissi = 1;
 
-color tausta = color(255,255,255);
-color viiva = color(0,0,0);
-color viiva2 = color(255,0,0);
-color tayte = color(255,255,255);
-color teksti = color(0,0,0);
+color tausta = color(25,25,25);
+color viiva = color(241,90,34);
+color viiva2 = color(203,219,42);
+color tayte = color(224,70,23);
+color teksti = color(250,250,250);
 
-boolean zoomIn = true;
-boolean zoomOut = false;
+//boolean zoomIn = true;
+//boolean zoomOut = false;
+
+boolean valitse_keissi = true;
 
 void setup() {
   size(leveys, korkeus);
@@ -41,6 +43,7 @@ void setup() {
   println(Serial.list()); 
   myPort = new Serial(this, Serial.list()[0], 9600); 
   myPort.bufferUntil(lf); 
+  frameRate(60);
 }
 
 void draw() {
@@ -53,7 +56,8 @@ void draw() {
     keissi = 0;
   }
 */
-keissi = 4;
+
+if(valitse_keissi) {
   switch(keissi) {
     case 0:
       int y = 2;
@@ -99,11 +103,12 @@ keissi = 4;
       break;
     case 4:
       marg = 0;
-      nollaaKaavio();
       piirraMuutos(askel,6);
       rullaus = false;
-  }
+    }
+    valitse_keissi = false;
 
+  }
 
   //Nollataan tausta  
   rectMode(CORNER);
@@ -112,7 +117,7 @@ keissi = 4;
   rect(0,0,width,height);
   
   if(fadeIn) {
-    tint(tausta,lapinakyvyys);
+    tint(255,lapinakyvyys);
     image(kaavio,x_0+marg,0);
     if(lapinakyvyys >= 255) {
       fadeIn = false;
@@ -120,21 +125,28 @@ keissi = 4;
       lapinakyvyys = lapinakyvyys+5;
     }
   } else if(fadeOut) {
-    tint(tausta,lapinakyvyys);
+    tint(255,lapinakyvyys);
     image(kaavio,x_0+marg,0);
     if(lapinakyvyys <= 0) {
       fadeOut = false;
       fadeIn = true;
+      valitse_keissi = true;
+      if(keissi > 4) {
+        keissi = 0;
+      } else {
+        keissi++;
+      }
+      
       x_0=0;
-                if(askel > 10) {
+ /*               if(askel > 10) {
             askel = 1;
           } else {
             askel++;
           }
-
-    } else {
-      lapinakyvyys = lapinakyvyys-5;
-    }
+*/
+      } else {
+        lapinakyvyys = lapinakyvyys-5;
+      }
     
   } else {  
     image(kaavio,x_0+marg,0);
@@ -170,6 +182,7 @@ void piirraTauko() {
 }
 
 void piirraPalkit(int sarake) {
+  nollaaKaavio();
   float kerroin = skaalaa(sarake);
 //säädetään palkkien piirustusmuoto
   kaavio.rectMode(CORNERS);
@@ -187,12 +200,13 @@ void piirraPalkit(int sarake) {
       kaavio.rect(i*vali,korkeus,i*vali+vali*3/4,korkeus-map(data.getFloat(i, sarake),min,maks,20,korkeus-20));
       kaavio.textFont(f);
       kaavio.textAlign(CENTER);
-      kaavio.fill(viiva);
+      kaavio.fill(teksti);
       String arvo = data.getString(i,sarake);
       if(arvo.length() > 5) {
         arvo = arvo.substring(0,4); 
       }
       kaavio.text(arvo,i*vali+vali/2*3/4,korkeus-map(data.getFloat(i, sarake),min,maks,20,korkeus-20)-5);
+      kaavio.fill(teksti);
       kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, korkeus-5);
       
    
@@ -201,26 +215,8 @@ void piirraPalkit(int sarake) {
   
 }
 
-void piirraTeksti() {
-/*
-  //säädetään fontti kohdalleen
-  PFont f;
-  f = createFont("Verdana",14,false);
-  
-  kaavio.beginDraw();
-  for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
-    TableRow row = data.getRow(i); //otetaan rivi
-    //laitetaan tekstiä palkin päälle
-    kaavio.textFont(f);
-    kaavio.textAlign(CENTER);
-    kaavio.fill(viiva);
-    kaavio.text(row.getString("sana"),i*vali+vali/2*3/4,korkeus-kerroin*row.getInt("x")-5);
-  }
-  kaavio.endDraw();
-*/
-}
-
 void piirraXY(int x, int y) {
+  nollaaKaavio();
   float xmin = minimi(x);
   float xmax = maksimi(x);
   float ymin = minimi(y);
@@ -240,7 +236,7 @@ void piirraXY(int x, int y) {
     kaavio.textFont(f);
     kaavio.textSize(16);
     kaavio.textAlign(CENTER);
-    kaavio.fill(viiva);
+    kaavio.fill(teksti);
     kaavio.text(data.getColumnTitle(x),leveys/2, korkeus-5);
     kaavio.pushMatrix();
     kaavio.rotate(3*HALF_PI);
@@ -251,6 +247,7 @@ void piirraXY(int x, int y) {
 }
 
 void piirraViiva(int sarake) {
+  nollaaKaavio();
   float kerroin = skaalaa(sarake);
   kaavio.beginDraw();
   kaavio.beginShape();
@@ -275,7 +272,7 @@ void piirraViiva(int sarake) {
   for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
       kaavio.textFont(f);
       kaavio.textAlign(CENTER);
-      kaavio.fill(viiva);
+      kaavio.fill(teksti);
       String arvo = data.getString(i,sarake);
       if(arvo.length() > 5) {
         arvo = arvo.substring(0,4); 
@@ -291,6 +288,7 @@ void piirraViiva(int sarake) {
 }
 
 void piirraViiva(int sarake1, int sarake2) {
+  nollaaKaavio();
   kaavio.beginDraw();
   kaavio.fill(tausta,0);
   float min1 = minimi(sarake1);
@@ -334,7 +332,7 @@ void piirraViiva(int sarake1, int sarake2) {
         arvo = arvo.substring(0,4); 
       }
       kaavio.text(arvo,i*vali+vali/2*3/4,korkeus-map(data.getFloat(i, sarake2), min2,maks2,20,korkeus-20)-5);
-      kaavio.fill(viiva);
+      kaavio.fill(teksti);
       kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, korkeus-5);
   }
 
@@ -343,6 +341,7 @@ void piirraViiva(int sarake1, int sarake2) {
 
 }
 void piirraMuutos(int askel, int sarake) {
+  nollaaKaavio();
   kaavio.beginDraw();
   //säädetään fontti kohdalleen
   PFont f;
@@ -350,7 +349,7 @@ void piirraMuutos(int askel, int sarake) {
   
   kaavio.textFont(f);
   kaavio.textAlign(CENTER);
-  kaavio.fill(viiva,255);
+  kaavio.fill(teksti,255);
   
   float muutos = 0;
 
