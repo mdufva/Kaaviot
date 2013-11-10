@@ -1,8 +1,18 @@
 /* RFID tagin lukemiseen tarvittavat muuttujat */
 import processing.serial.*;  
-Serial myPort;    // The serial port
+Serial rfid1;    //eka lukija
+Serial rfid2;    //toka lukija
+Serial arduino;    //arduino
 String inString = "Tyhjä";  // Input string from serial port
 int lf = 10;      // ASCII linefeed 
+
+/* tagit */
+String[] tagit = {
+"66006BEEEC0F", //sarake B
+"66006C34625C", //sarake C
+"66006C081A18", //sarake D
+"66006C0DFCFB"  //sarake E
+};
 
 /* statistiikkakirjasto */
 import papaya.*;
@@ -41,14 +51,17 @@ int lapinakyvyys = 0; //ristivaihtoihin tarvittava muuttuja
 boolean fadeIn = true;  //feidataanko sisään
 boolean fadeOut = false; //feidataanko pois
 boolean rullaus = false; //liikutetaanko kaaviota
-int rullausNopeus = 2; //kuinka monta pikselia kerrallaan siirretään
-int fadeNopeus = 10; //ristivaihtojen nopeus
+int rullausNopeus = 4; //kuinka monta pikselia kerrallaan siirretään
+int fadeNopeus = 15; //ristivaihtojen nopeus
 boolean tauko = false; //pidetäänkö kaaviota paikallaan
+int timer = 0;
+int timerMax = 200;
 boolean valitseKeissi = true; //valitaanko keissi uudelleen
 boolean coincidence = false;
 boolean alku = false;
+int montako = 0;
 
-int keissi = 9; //mikä tapaus piirretään
+int keissi = 0; //mikä tapaus piirretään
 
 int y1 = 7;
 int y2 = 1;
@@ -62,16 +75,20 @@ void setup() {
   background(tausta); //taustaväri
   /* ruvetaan kuuntelemaan sarjaporttia */
   println(Serial.list()); 
-  myPort = new Serial(this, Serial.list()[0], 9600); 
-  myPort.bufferUntil(lf); 
+  rfid1 = new Serial(this, Serial.list()[2], 9600); 
+  rfid1.bufferUntil(lf); 
+  rfid2 = new Serial(this, Serial.list()[4], 9600); 
+  rfid2.bufferUntil(lf); 
+  arduino = new Serial(this, Serial.list()[0], 9600); 
+  arduino.bufferUntil(lf); 
 }
 
 void draw() {
-
 if(valitseKeissi) { //esine lisätty tai poistettu
   switch(keissi) { 
     /* taukoanimaatio */
     case 0: 
+      marg = 0;
       piirraTauko();
       rullaus = false;
       coincidence = false;
@@ -110,7 +127,7 @@ if(valitseKeissi) { //esine lisätty tai poistettu
 
       break;
       
-    /* historgrammi */
+    /* histogrammi */
     case 4:
       marg = 20;
       piirraHistogram(y1);
@@ -120,7 +137,6 @@ if(valitseKeissi) { //esine lisätty tai poistettu
       
     /* kaksi viivaa */
     case 5:
-      y2 = 5;
       offset1 = 0;
       while(data.getFloat(offset1,y1) < 0) {
         offset1++;
@@ -138,7 +154,6 @@ if(valitseKeissi) { //esine lisätty tai poistettu
       
     /* kaksi palkkia */
     case 6:
-      y2 = 5;
       offset1 = 0;
       while(data.getFloat(offset1,y1) < 0) {
         offset1++;
@@ -163,18 +178,17 @@ if(valitseKeissi) { //esine lisätty tai poistettu
 
       break;
       
-      
-    /* kaksi settiä yhdistävä kaavio */
-    case 8:
-      y2 = 5;
-      piirraMatch(y1, y2);
-      break;
-      
     /* korrelaatioteksti */
-    case 9:
+    case 8:
       piirraKorrelaatio(y1,y2);
       rullaus=false;
       coincidence = true;
+      break;
+      
+    /* kaksi settiä yhdistävä kaavio */
+    case 9:
+      y2 = 5;
+      piirraMatch(y1, y2);
       break;
     
     }
@@ -205,7 +219,7 @@ if(valitseKeissi) { //esine lisätty tai poistettu
       fadeOut = false;
       fadeIn = true;
       valitseKeissi = true;  
-      keissi = arvoKeissi(1);    
+      keissi = arvoKeissi(montako);    
       x_0=0;
       } else {
         lapinakyvyys = lapinakyvyys-fadeNopeus;
@@ -229,9 +243,13 @@ if(valitseKeissi) { //esine lisätty tai poistettu
           text("Coincidence?", leveys/2, korkeus/2);
         }
         if(tauko) {
-          delay(5000);
-          tauko = false;
-          fadeOut = true;
+          if(timer < timerMax) {
+            timer++;
+          } else {
+            timer = 0;
+            tauko = false;
+            fadeOut = true;
+          }
         } else {
           tauko = true;
         }
@@ -330,7 +348,7 @@ void piirraPalkit(int sarake1, int sarake2) {
       if(data.getFloat(i,sarake2) > 0) {
         kaavio.rect(i*vali+vali*3/8,korkeus-alamarg,i*vali+vali*3/4,korkeus-alamarg-map(data.getFloat(i, sarake2),min2,maks2,20,korkeus-2*alamarg));
       }
-      arvo = data.getString(i,sarake1);
+      arvo = data.getString(i,sarake2);
       if(arvo.length() > 5) {
         arvo = arvo.substring(0,4); 
       }
@@ -357,38 +375,44 @@ void piirraPalkit(int sarake1, int sarake2) {
 }
 
 
-void piirraXY(int x, int y) {
+void piirraXY(int sarake1, int sarake2) {
   nollaaKaavio();
-  float xmin = minimi(x);
-  float xmax = maksimi(x);
-  float ymin = minimi(y);
-  float ymax = maksimi(y);  
+  FloatList x = new FloatList(data.getFloatColumn(sarake1));
+  FloatList y = new FloatList(data.getFloatColumn(sarake2));
+  for(int i = 0; i < x.size(); i++) {
+    if(x.get(i) < 0 || y.get(i) < 0) {
+      x.remove(i);
+      y.remove(i);
+    }
+  }
+
   kaavio.beginDraw();
   kaavio.stroke(viiva1);
   int koko = 10;
 
 
 
-  for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
+  for (int i = 0; i < x.size(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
     //Piirretään piste
     kaavio.fill(tayte1);    
-    kaavio.ellipse(map(data.getFloat(i,x),xmin,xmax,0,leveys), korkeus - map(data.getFloat(i,y),ymin,ymax,0,korkeus),koko,koko);
+    kaavio.ellipse(map(x.get(i),x.min(),x.max(),0,leveys), korkeus - map(y.get(i),y.min(),y.max(),0,korkeus),koko,koko);
+  }
     kaavio.textFont(f3);
     kaavio.textAlign(CENTER);
     kaavio.fill(teksti);
-    kaavio.text(data.getColumnTitle(x),leveys/2, korkeus-10);
+    kaavio.text(data.getColumnTitle(sarake1),leveys/2, korkeus-10);
     kaavio.pushMatrix();
     kaavio.rotate(3*HALF_PI);
-    kaavio.text(data.getColumnTitle(y),-korkeus/2,30);   
+    kaavio.text(data.getColumnTitle(sarake2),-korkeus/2,30);   
     kaavio.popMatrix();
-  }
+
   kaavio.endDraw();  
   otsikko.beginDraw();
   otsikko.textFont(f3);
   otsikko.textAlign(CENTER);
   otsikko.fill(teksti);
-  otsikko.text(data.getColumnTitle(x) + " vs.",leveys/2,50);
-  otsikko.text(data.getColumnTitle(y),leveys/2,100);
+  otsikko.text(data.getColumnTitle(sarake1) + " vs.",leveys/2,50);
+  otsikko.text(data.getColumnTitle(sarake2),leveys/2,100);
   otsikko.endDraw();
   
   
@@ -696,11 +720,18 @@ int suurinMuutos(int askel, int sarake) { //palauttaa suurimman muutoksen indeks
 } 
  
 int arvoKeissi(int datat) {
-    alku = false;
 
-  if(datat == 1) {
-    return round(random(0.5,7.4));
+  if(datat == 0) {
+    alku = true;
+    return 0;
+  } else if(datat == 1) {
+    alku = false;
+    return round(random(0.5,4.4));
+  } else if(datat == 2) {
+    alku = false;
+    return round(random(4.5,8.4));
   } else {
+    alku = true;
     return 0;
   }
   
@@ -711,20 +742,46 @@ void piirraMatch(int sarake1, int sarake2) {
 }
 
 void serialEvent(Serial p) { 
-  inString = p.readString(); 
-  inString = trim(inString);
-  
-  if(inString.equals("66006BEEEC0F")) {
-    y1 = 3;
-  } else if(inString.equals("66006C34625C")) {
-    y1 = 4;
-  } else {
-    y1 = 2;
+  if(p == rfid1) {
+    inString = p.readString(); 
+    inString = trim(inString);
+    for(int i = 0;i < tagit.length; i++) {
+      if(inString.equals(tagit[i])) {
+        y1 = i+1;
+      } 
+    }
   }
-  keissi = arvoKeissi(1);
+
+  if(p == rfid2) {
+    inString = p.readString(); 
+    inString = trim(inString);
+    for(int i = 0;i < tagit.length; i++) {
+      if(inString.equals(tagit[i])) {
+        y2 = i+1;
+      } 
+    }
+  }
+  
+  if(p == arduino) {
+    inString = p.readString(); 
+    inString = trim(inString);
+    int lasna1 = 0;
+    int lasna2 = 0;
+
+    if(inString.length() > 2) {      
+      lasna1 = Integer.parseInt(inString.substring(0,1));
+      lasna2 = Integer.parseInt(inString.substring(2,3));
+    }
+    if(lasna1 == 1 && lasna2 == 1) {
+      montako = 2;
+    } else if(lasna1 == 1 || lasna2 == 1) {
+      montako = 1;
+    } else {
+      montako = 0;
+    }
+  }
+
   fadeOut = true;
-
-
 } 
   
   
