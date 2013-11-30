@@ -57,15 +57,15 @@ boolean tauko = false; //pidetäänkö kaaviota paikallaan
 int timer = 0;
 int timerMax = 200;
 boolean valitseKeissi = true; //valitaanko keissi uudelleen
-boolean coincidence = false;
-boolean alku = false;
-int montako = 0;
+boolean coincidence = false; //tuleeko näytölle teksti "Coincidence?"
+boolean alku = false; //Mennäänkö aloitusruutuun
+int montako = 0; //montako RFID korttia lukijassa
 
 int keissi = 0; //mikä tapaus piirretään
 
-int y1 = 7;
+int y1 = 7; //Mikä sarake valitaan datasta
 int y2 = 1;
-int offset1 = 0;
+int offset1 = 0; //kuinka paljon tyhjiä arvoja on alussa
 int offset2 = 0;
 
 void setup() {
@@ -92,9 +92,7 @@ if(valitseKeissi) { //esine lisätty tai poistettu
       piirraTauko();
       rullaus = false;
       coincidence = false;
-      alku = true;
-
-      
+      alku = true;      
       break;
     /* yksi viiva */
     case 1: 
@@ -271,39 +269,42 @@ void piirraTauko() {
   
 }
 
+/* Yksi palkki */
 void piirraPalkit(int sarake) {
-  nollaaKaavio();
-//  float kerroin = skaalaa(sarake);
-//säädetään palkkien piirustusmuoto
-  kaavio.rectMode(CORNERS);
-  //säädetään fontti kohdalleen
- float min = minimi(sarake);
- float maks = maksimi(sarake);
-//aloitetaan piirustus
-  kaavio.beginDraw();
+  nollaaKaavio(); //tyhjennetään edellinen kaaviopiirros
+  kaavio.rectMode(CORNERS);   //säädetään palkkien piirustusmuoto
+  float min = minimi(sarake); //datan pienin arvo, skaalausta varten
+  float maks = maksimi(sarake); //data suurin arvo, skaalausta varten
+
+  kaavio.beginDraw(); //aloitetaan piirustus
   for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
-      //Piirretään palkki
-      kaavio.fill(tayte1);
-      kaavio.stroke(viiva1);
-      if(data.getFloat(i,sarake) > 0) {
-        kaavio.rect(i*vali,korkeus-alamarg,i*vali+vali*3/4,korkeus-alamarg-map(data.getFloat(i, sarake),min,maks,alamarg,korkeus-2*alamarg));
+      kaavio.fill(tayte1); //palkin sisusvärin asetus
+      kaavio.stroke(viiva1); //palkin viivan värin asetus
+      if(data.getFloat(i,sarake) > 0) { //piirretään vain, jos dataa on, puuttuva arvot on merkitty -1:llä
+        kaavio.rect(i*vali,korkeus-alamarg,i*vali+vali*3/4,korkeus-alamarg-map(data.getFloat(i, sarake),min,maks,alamarg,korkeus-2*alamarg)); 
+        //piirretään suorakulmio antamalla sen kulmien koordinaatit.
+        //vali kertoo palkkien vasemman alakulman välisen etäisyyden, joten i*vali antaa kullekin palkille oikean alakulman koordinaatin.
+        //Palkkien leveys on 3/4 osaa välistä
+        //alamarg kertoo alle jäävän tilan, ylhäälle jätetään 2 kertaa alamarginaali
+        //map skaalaa arvon näytölle, eli venyttää esim välin 20-25 arvot välille 0-800.
       }
-      kaavio.textFont(f);
-      kaavio.textAlign(CENTER);
-      kaavio.fill(teksti);
-      String arvo = data.getString(i,sarake);
-      if(arvo.length() > 5) {
+      kaavio.textFont(f); //fontin asetus
+      kaavio.textAlign(CENTER); //tekstin asemointi
+      kaavio.fill(teksti); //tekstin värin asetus
+      String arvo = data.getString(i,sarake); //otetaan arvo
+      if(arvo.length() > 5) { //näytetään vain osa desimaaleista
         arvo = arvo.substring(0,4); 
       }
-      if(data.getFloat(i,sarake) > 0) {
+      if(data.getFloat(i,sarake) > 0) { //tulostetaan arvo vain, jos se on positiivinen eli dataa on
         kaavio.text(arvo,i*vali+vali/2*3/4,korkeus-alamarg-map(data.getFloat(i, sarake),min,maks,alamarg,korkeus-2*alamarg)-5);
       }
       kaavio.fill(teksti);
-      kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, korkeus-5);
+      kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, korkeus-5); //vuosiotsikot alle
       
    
   }
   kaavio.endDraw();
+  //kaavion otsikon piirto, erillinen objekti
   otsikko.beginDraw();
   otsikko.fill(teksti);
   otsikko.textFont(f3);
@@ -313,24 +314,21 @@ void piirraPalkit(int sarake) {
   
 }
 
-void piirraPalkit(int sarake1, int sarake2) {
+
+/* Kaksi palkkia */
+void piirraPalkit(int sarake1, int sarake2) { //samanlainen kuin yhden palkin tapaus
   nollaaKaavio();
-  //säädetään palkkien piirustusmuoto
   kaavio.rectMode(CORNERS);
-  //säädetään fontti kohdalleen
   float min1 = minimi(sarake1);
   float maks1 = maksimi(sarake1);
   float min2 = minimi(sarake2);
   float maks2 = maksimi(sarake2);
 
-  //aloitetaan piirustus
   kaavio.beginDraw();
   kaavio.textFont(f);
   kaavio.textAlign(CENTER);
   String arvo = "";
   for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
-      //Piirretään palkki
-
       kaavio.fill(tayte1);
       kaavio.stroke(viiva1);
       if(data.getFloat(i,sarake1) > 0) {
@@ -357,8 +355,7 @@ void piirraPalkit(int sarake1, int sarake2) {
       }
       kaavio.fill(teksti);
       kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, korkeus-5);
-      
-   
+         
   }
   kaavio.endDraw();
 
@@ -370,16 +367,15 @@ void piirraPalkit(int sarake1, int sarake2) {
   otsikko.fill(tayte2);
   otsikko.text(data.getColumnTitle(sarake2),leveys/2,100);
   otsikko.endDraw();
-
   
 }
 
-
+/* XY-kaavio */
 void piirraXY(int sarake1, int sarake2) {
   nollaaKaavio();
-  FloatList x = new FloatList(data.getFloatColumn(sarake1));
+  FloatList x = new FloatList(data.getFloatColumn(sarake1)); //tallennetaan tiedot listaksi helpompaa käsittelyä varten
   FloatList y = new FloatList(data.getFloatColumn(sarake2));
-  for(int i = 0; i < x.size(); i++) {
+  for(int i = 0; i < x.size(); i++) { //poistetaan puuttuvat arvot listoista. Jos toisesta puuttuu arvo, poistetaan molemmat, sillä tarvitaan arvopareja.
     if(x.get(i) < 0 || y.get(i) < 0) {
       x.remove(i);
       y.remove(i);
@@ -388,25 +384,26 @@ void piirraXY(int sarake1, int sarake2) {
 
   kaavio.beginDraw();
   kaavio.stroke(viiva1);
-  int koko = 10;
-
-
-
+  int koko = 10; //pisteen koko
+  //Piirretään pisteet
   for (int i = 0; i < x.size(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
-    //Piirretään piste
     kaavio.fill(tayte1);    
+    //Piirretään piste, arvot skaalattu näytölle koordinaateiksi map-funktiolla
     kaavio.ellipse(map(x.get(i),x.min(),x.max(),0,leveys), korkeus - map(y.get(i),y.min(),y.max(),0,korkeus),koko,koko);
   }
-    kaavio.textFont(f3);
-    kaavio.textAlign(CENTER);
-    kaavio.fill(teksti);
-    kaavio.text(data.getColumnTitle(sarake1),leveys/2, korkeus-10);
-    kaavio.pushMatrix();
-    kaavio.rotate(3*HALF_PI);
-    kaavio.text(data.getColumnTitle(sarake2),-korkeus/2,30);   
-    kaavio.popMatrix();
+
+  //Piirretään akselien otsikot
+  kaavio.textFont(f3);
+  kaavio.textAlign(CENTER);
+  kaavio.fill(teksti);
+  kaavio.text(data.getColumnTitle(sarake1),leveys/2, korkeus-10); //x-akselin otsikko  
+  kaavio.pushMatrix(); //lisätään objektiin muutosmatriisi
+  kaavio.rotate(3*HALF_PI);  //pyöritetään koko kuvaa 90 astetta
+  kaavio.text(data.getColumnTitle(sarake2),-korkeus/2,30); //y-akseli
+  kaavio.popMatrix(); //poistetaan muutosmatriisi, jolloin kuva kääntyy takaisin
 
   kaavio.endDraw();  
+
   otsikko.beginDraw();
   otsikko.textFont(f3);
   otsikko.textAlign(CENTER);
@@ -418,28 +415,27 @@ void piirraXY(int sarake1, int sarake2) {
   
 }
 
-void piirraViiva(int sarake) {
+/* Yhden viivan piirto */
+void piirraViiva(int sarake) { //samantapainen kuin palkin piirto
   nollaaKaavio();
-//  float kerroin = skaalaa(sarake);
   kaavio.beginDraw();
-  kaavio.beginShape();
+
+  //piirretään viiva
+  kaavio.beginShape(); //viiva on yhtenäinen "shape", joka piirretään osissa, siksi beginShape
   kaavio.fill(tausta);
-    float min = minimi(sarake);
-    float maks = maksimi(sarake);
+  float min = minimi(sarake);
+  float maks = maksimi(sarake);
 
-    for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
-
-    //Piirretään viiva
+  for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
     kaavio.stroke(viiva1);
     if(data.getFloat(i,sarake) > 0) {    
       kaavio.vertex(i*vali,korkeus-map(data.getFloat(i,sarake),min,maks,alamarg,korkeus-2*alamarg));
+      //vertex piirtää viivaa aina edellisestä koordinaatistaan seuraavaksi annettuun. Koordinaatit annetaan siis yksitellen.
     }
   }
   kaavio.endShape();
 
-
-  //säädetään fontti kohdalleen
-
+  //Lisätään arvot viivaan
   for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
       kaavio.textFont(f);
       kaavio.textAlign(CENTER);
@@ -453,9 +449,8 @@ void piirraViiva(int sarake) {
       }
       kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, korkeus-5);
   }
-
-
   kaavio.endDraw();
+
   otsikko.beginDraw();
   otsikko.textFont(f3);
   otsikko.textAlign(CENTER);
@@ -465,6 +460,7 @@ void piirraViiva(int sarake) {
 
 }
 
+/* Kaksi viivaa */
 void piirraViiva(int sarake1, int sarake2) {
   nollaaKaavio();
   kaavio.beginDraw();
@@ -530,37 +526,39 @@ void piirraViiva(int sarake1, int sarake2) {
   otsikko.endDraw();
 
 }
-void piirraMuutos(int askel, int sarake) {
+
+/* Tulostaa suurimman muutoksen */
+void piirraMuutos(int askel, int sarake) { //askel kertoo, kuinka pitkää aikaväliä katsotaan
   nollaaKaavio();
   kaavio.beginDraw();
-  //säädetään fontti kohdalleen
-  
   kaavio.textFont(f2);
   kaavio.textAlign(CENTER);
   kaavio.fill(teksti,255);
   
-  float muutos = 0;
+  float muutos = 0; //tarkasteltavan muutoksen arvo
+  int indeksi = -1; //muutoksen indeksi; milloin muutos tapahtui (alkuvuosi)
+  float maks = 0; //suurimman muutoksen arvo
 
-  int indeksi = -1;
-  float maks = 0;
   for(int i = 0; i < data.getRowCount(); i++) {
-    if(i + askel < data.getRowCount()) {
-      if(data.getFloat(i,sarake) > 0 && data.getFloat(i+askel,sarake) > 0) {
-      if(abs(data.getFloat(i,sarake) - data.getFloat(i+askel, sarake)) > maks) {
-        maks = abs(data.getFloat(i,sarake) - data.getFloat(i+askel, sarake));
-        muutos = (data.getFloat(i,sarake) - data.getFloat(i+askel, sarake));
-        indeksi = i;
-      }  
-    } else {
+    if(i + askel < data.getRowCount()) { //varmistetaan, että arvoja riittää
+      if(data.getFloat(i,sarake) > 0 && data.getFloat(i+askel,sarake) > 0) { //tarkistetaan, että tietoja ei puutu
+        if(abs(data.getFloat(i,sarake) - data.getFloat(i+askel, sarake)) > maks) { //lasketaan muutoksen itseisarvo ja verrataan tähän astiseen maksimiin
+          maks = abs(data.getFloat(i,sarake) - data.getFloat(i+askel, sarake)); //jos oli suurempi, tallennetaan uudeksi maksimiksi
+          muutos = (data.getFloat(i,sarake) - data.getFloat(i+askel, sarake)); //muutoksen oikea arvo
+          indeksi = i; //tallennetaan milloin muutos tapahtui
+        }  
+      } else {
       }
     } else {
     }
   }
-  String otsikko = data.getColumnTitle(sarake);
-  String label = otsikko.substring(0,otsikko.indexOf("("));
-  String suure = otsikko.substring(otsikko.indexOf("(")+1,otsikko.indexOf(")"));
-  String muutos_lyh = String.format("%.2f", muutos);
   
+  String otsikko = data.getColumnTitle(sarake); //otetaan sarakkeen otsikko, sisältää myös suureen
+  String label = otsikko.substring(0,otsikko.indexOf("(")); //poistetaan suure otsikosta
+  String suure = otsikko.substring(otsikko.indexOf("(")+1,otsikko.indexOf(")")); //tallennetaan suure omaksi muuttujakseen
+  String muutos_lyh = String.format("%.2f", muutos); //vähennetään muutoksen desimaalit kahteen
+  
+  //tulostetaan teksit näytölle
   kaavio.text("The biggest change over " + askel + " year time range in",leveys/2,50);
   kaavio.text(label,leveys/2,100);
   kaavio.text("happened from " + data.getString(indeksi,0) + " to " + data.getString(indeksi+askel,0) + ": ",leveys/2,150);
@@ -569,23 +567,26 @@ void piirraMuutos(int askel, int sarake) {
 
   kaavio.endDraw();
 
+
+
 }
 
+/* Histogrammi */
 void piirraHistogram(int sarake) {
   nollaaKaavio();
-  FloatList sarakedata = new FloatList(data.getFloatColumn(sarake));
-  for(int i = 0; i < sarakedata.size(); i++) {
+  FloatList sarakedata = new FloatList(data.getFloatColumn(sarake)); //tetaan data taas listaan helpompaa käsittelyä varten
+  for(int i = 0; i < sarakedata.size(); i++) { //poistetaan puuttuvat tiedot
     if(sarakedata.get(i) < 0) {
       sarakedata.remove(i);
     }
   }
   float min = sarakedata.min();
   float maks = sarakedata.max();
-  float lev = (maks-min)/10;
-  Frequency hist = new Frequency(sarakedata.array(),min,maks,lev);
+  float lev = (maks-min)/10; //tehdään histogrammiin kymmenen palkkia, joten lasketaan, kuinka leveät vaihteluvälit ovat
+  Frequency hist = new Frequency(sarakedata.array(),min,maks,lev); //Papaya kirjaston Frequency laskee histogrammin
   
-  float[] frek = hist.getFrequency();
-  float frekmaks = 0;
+  float[] frek = hist.getFrequency(); //otetaan histogrammin tiedot arrayhin
+  float frekmaks = 0; //katsotaan, mikä on suurin frekvenssi
   for(int i = 0; i < frek.length;i++) {
     if(frek[i] > frekmaks) {
       frekmaks = frek[i];
@@ -594,8 +595,8 @@ void piirraHistogram(int sarake) {
     
   kaavio.beginDraw();
   kaavio.rectMode(CORNERS);
-  float binLeveys = (leveys-2*marg)/hist.getNumBins();
-  for(int i = 0; i < frek.length; i++) {
+  float binLeveys = (leveys-2*marg)/hist.getNumBins(); //lasketaan, kuinka leveitä palkit ovat näytöllä
+  for(int i = 0; i < frek.length; i++) { //piirretään palkit
       kaavio.fill(tayte1);
       kaavio.stroke(viiva1);
       kaavio.rect(i*binLeveys,korkeus-alamarg,i*binLeveys+binLeveys*3/4,korkeus-alamarg-map(frek[i],0,frekmaks,alamarg,korkeus-2*alamarg-100));
@@ -615,6 +616,7 @@ void piirraHistogram(int sarake) {
 
 }
 
+/* Korrelaatio */
 void piirraKorrelaatio(int sarake1, int sarake2) {
   nollaaKaavio();
   FloatList sarakedata1 = new FloatList(data.getFloatColumn(sarake1));
@@ -628,15 +630,18 @@ void piirraKorrelaatio(int sarake1, int sarake2) {
     }
   }
   
-  float[] coeff = Linear.bestFit(sarakedata1.array(),sarakedata2.array());
+  //Papaya kirjaston Linear laskee lineaarisen regression ja palauttaa kulmakertoimen ja vakiotermin.
+  float[] coeff = Linear.bestFit(sarakedata1.array(),sarakedata2.array()); 
   float slope = coeff[0]; 
   String muutos = "";
+  //katsotaan onko kulmakerroin positiivinen vai negatiivinen, sen perusteella valitaan oikea sana
   if(slope > 0) {
     muutos = "increases";
   } else {
     muutos = "decreases";
     slope = 0 - slope;
   }
+  //sama otsikonpuljaus kuin piirraMuutos funktiossa
   String label = data.getColumnTitle(sarake1);
   String otsikko1 = label.substring(0,label.indexOf("("));
   String suure1 = label.substring(label.indexOf("(")+1,label.indexOf(")"));
@@ -644,6 +649,7 @@ void piirraKorrelaatio(int sarake1, int sarake2) {
   String otsikko2 = label.substring(0,label.indexOf("("));
   String suure2 = label.substring(label.indexOf("(")+1,label.indexOf(")"));
 
+  //tulostetaan tekstit
   kaavio.beginDraw();
   kaavio.textFont(f2);
   kaavio.textAlign(CENTER);
@@ -657,7 +663,7 @@ void piirraKorrelaatio(int sarake1, int sarake2) {
   otsikko.endDraw();
 }
 
-  
+/* Kaavion tyhjennys */  
 void nollaaKaavio() {
   x_0=0;
   kaavio.beginDraw();
@@ -668,19 +674,6 @@ void nollaaKaavio() {
   otsikko.endDraw();
 }
   
-/*
-float skaalaa(int sarake) {
-  int maksimi = 0;
-  for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
-    if(data.getInt(i, sarake) > maksimi) {
-      maksimi = data.getInt(i, sarake);
-    } else {
-    }
-  }
-  float k = korkeus;
-  return (k-50)/maksimi;
-}
-*/ 
 float minimi(int sarake) {
  float minimi = 10000;
   for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
@@ -703,6 +696,7 @@ float maksimi(int sarake) {
   return maksimi;
 }
 
+/*
 int suurinMuutos(int askel, int sarake) { //palauttaa suurimman muutoksen indeksin
   int indeksi = -1;
   float maks = 0;
@@ -718,36 +712,42 @@ int suurinMuutos(int askel, int sarake) { //palauttaa suurimman muutoksen indeks
   }
   return indeksi;
 } 
- 
+*/
+
+/* arvotaan, mitä piirretään */
 int arvoKeissi(int datat) {
 
-  if(datat == 0) {
+  if(datat == 0) { //ei kortteja
     alku = true;
     return 0;
-  } else if(datat == 1) {
+  } else if(datat == 1) { //yksi kortti
     alku = false;
     return round(random(0.5,4.4));
-  } else if(datat == 2) {
+  } else if(datat == 2) { //kaksi korttia
     alku = false;
     return round(random(4.5,8.4));
-  } else {
+  } else { //ei kortteja
     alku = true;
     return 0;
   }
   
 }
 
+/* matsaus, ei vielä tehty */
 void piirraMatch(int sarake1, int sarake2) {
   
 }
 
+/* tätä kutsutaan aina kun sarjaportti sanoo jotain
+   eli kun rfid kortti laitetaan lukijaan (jolloin rfid lukija lähettää sarjaporttiin kortin tunnuksen ja arduino ykkösen)
+   tai kun rfid kortti otetaan pois (jolloin arduino lähettää sarjaporttiin nollan) */
 void serialEvent(Serial p) { 
-  if(p == rfid1) {
-    inString = p.readString(); 
-    inString = trim(inString);
-    for(int i = 0;i < tagit.length; i++) {
-      if(inString.equals(tagit[i])) {
-        y1 = i+1;
+  if(p == rfid1) { //p on sarjaportin tunnus
+    inString = p.readString();  //luetaan
+    inString = trim(inString);  //poistetaan välilyönnit
+    for(int i = 0;i < tagit.length; i++) { //käydään kortit läpi
+      if(inString.equals(tagit[i])) { //jos löytyy sama tunnus
+        y1 = i+1; //asetetaan valittavaksi dataksi oikea sarakkeen numero. Sarakkeen indeksi alkaa ykkösestä, i niollasta, siksi täytyy lisätä ykkönen
       } 
     }
   }
@@ -762,7 +762,11 @@ void serialEvent(Serial p) {
     }
   }
   
-  if(p == arduino) {
+  if(p == arduino) { 
+    //arduino lähettää vietin muotoa "x;y", jossa x ja y on 1 tai nolla.
+    //x on eka kortinlukija, y on toinen. 
+    //1 tarkoittaa että kortti on paikalla, 0 että ei ole
+    //Otetaan nämä arvot talteen.
     inString = p.readString(); 
     inString = trim(inString);
     int lasna1 = 0;
@@ -772,16 +776,16 @@ void serialEvent(Serial p) {
       lasna1 = Integer.parseInt(inString.substring(0,1));
       lasna2 = Integer.parseInt(inString.substring(2,3));
     }
-    if(lasna1 == 1 && lasna2 == 1) {
+    if(lasna1 == 1 && lasna2 == 1) { //molemmat läsnä
       montako = 2;
-    } else if(lasna1 == 1 || lasna2 == 1) {
+    } else if(lasna1 == 1 || lasna2 == 1) { //toinen läsnä
       montako = 1;
-    } else {
+    } else { //ei kortteja
       montako = 0;
     }
   }
 
-  fadeOut = true;
+  fadeOut = true; //jotain muuttui, joten thedään fadeout, josta puolestaan kutsutaan keissinarvontaa
 } 
   
   
