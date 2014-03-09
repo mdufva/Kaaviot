@@ -21,20 +21,18 @@ import papaya.*;
 PGraphics kaavio; //tähän piirretään kaavio
 PGraphics otsikko; //tiedot datasta
 int x_0 = 0;  //kaavioiden origo
-Table data = loadTable("data4.csv","header"); //kaikki tarvittava data
+Table data = loadTable("/Users/mikkodufva/Documents/Processing/Kaaviot/KaavioidenPiirto/data/data4.csv","header"); //kaikki tarvittava data
 
 /* Ulkoasu */
-int leveys = 1200;
-int korkeus = 800;
 int vali = 50; //palkkien väli
 int marg = 20; //vasen marginaali
 int alamarg = 20; //alamarginaali
 int leveysMax = (data.getRowCount()-1)*vali;
 
 /* fontti */
-PFont f = loadFont("Monospaced-16.vlw");
-PFont f2 = loadFont("Monospaced-36.vlw");
-PFont f3 = loadFont("Monospaced-26.vlw");
+PFont f = loadFont("/Users/mikkodufva/Documents/Processing/Kaaviot/KaavioidenPiirto/data/Monospaced-16.vlw");
+PFont f2 = loadFont("/Users/mikkodufva/Documents/Processing/Kaaviot/KaavioidenPiirto/data/Monospaced-36.vlw");
+PFont f3 = loadFont("/Users/mikkodufva/Documents/Processing/Kaaviot/KaavioidenPiirto/data/Monospaced-26.vlw");
 
 
 /* Värit */
@@ -51,7 +49,7 @@ int lapinakyvyys = 0; //ristivaihtoihin tarvittava muuttuja
 boolean fadeIn = true;  //feidataanko sisään
 boolean fadeOut = false; //feidataanko pois
 boolean rullaus = false; //liikutetaanko kaaviota
-int rullausNopeus = 4; //kuinka monta pikselia kerrallaan siirretään
+int rullausNopeus = 2; //kuinka monta pikselia kerrallaan siirretään
 int fadeNopeus = 15; //ristivaihtojen nopeus
 boolean tauko = false; //pidetäänkö kaaviota paikallaan
 int timer = 0;
@@ -63,23 +61,23 @@ int montako = 0; //montako RFID korttia lukijassa
 
 int keissi = 0; //mikä tapaus piirretään
 
-int y1 = 7; //Mikä sarake valitaan datasta
+int y1 = 1; //Mikä sarake valitaan datasta
 int y2 = 1;
 int offset1 = 0; //kuinka paljon tyhjiä arvoja on alussa
 int offset2 = 0;
 
 void setup() {
-  size(leveys, korkeus);
-  kaavio = createGraphics(leveysMax,korkeus); //luodaan riittävän suuri piirustusalusta
-  otsikko = createGraphics(leveys,korkeus);
+  size(displayWidth, displayHeight);
+  kaavio = createGraphics(leveysMax,displayHeight); //luodaan riittävän suuri piirustusalusta
+  otsikko = createGraphics(displayWidth,displayHeight);
   background(tausta); //taustaväri
   /* ruvetaan kuuntelemaan sarjaporttia */
   println(Serial.list()); 
-  rfid1 = new Serial(this, Serial.list()[2], 9600); 
+  rfid1 = new Serial(this, Serial.list()[9], 9600); 
   rfid1.bufferUntil(lf); 
-  rfid2 = new Serial(this, Serial.list()[3], 9600); 
+  rfid2 = new Serial(this, Serial.list()[8], 9600); 
   rfid2.bufferUntil(lf); 
-  arduino = new Serial(this, Serial.list()[1], 9600); 
+  arduino = new Serial(this, Serial.list()[7], 9600); 
   arduino.bufferUntil(lf); 
 }
 
@@ -229,7 +227,7 @@ void draw() {
     image(kaavio,x_0+marg,0);
     image(otsikko,0,0);
     if(rullaus) {
-      if (x_0 <= -(leveysMax-leveys+marg)) {
+      if (x_0 <= -(leveysMax-displayWidth+marg)) {
         fadeOut = true;
       } else {
         x_0 = x_0 - rullausNopeus;    
@@ -239,7 +237,7 @@ void draw() {
         textAlign(CENTER);
         fill(viiva1);
         if(coincidence) {
-          text("Coincidence?", leveys/2, korkeus/2);
+          text("Coincidence?", displayWidth/2, displayHeight/2);
         }
         if(tauko) {
           if(timer < timerMax) {
@@ -265,7 +263,7 @@ void piirraTauko() {
   kaavio.textFont(f2);
   kaavio.textAlign(CENTER);
   kaavio.fill(teksti);
-  kaavio.text("Place an object to a bowl", leveys/2, korkeus/2);
+  kaavio.text("Place an object to a bowl", displayWidth/2, displayHeight/2);
   kaavio.endDraw();
   
 }
@@ -282,7 +280,7 @@ void piirraPalkit(int sarake) {
       kaavio.fill(tayte1); //palkin sisusvärin asetus
       kaavio.stroke(viiva1); //palkin viivan värin asetus
       if(data.getFloat(i,sarake) > 0) { //piirretään vain, jos dataa on, puuttuva arvot on merkitty -1:llä
-        kaavio.rect(i*vali,korkeus-alamarg,i*vali+vali*3/4,korkeus-alamarg-map(data.getFloat(i, sarake),min,maks,alamarg,korkeus-2*alamarg)); 
+        kaavio.rect(i*vali,displayHeight-alamarg,i*vali+vali*3/4,displayHeight-alamarg-map(data.getFloat(i, sarake),min,maks,alamarg,displayHeight-2*alamarg)); 
         //piirretään suorakulmio antamalla sen kulmien koordinaatit.
         //vali kertoo palkkien vasemman alakulman välisen etäisyyden, joten i*vali antaa kullekin palkille oikean alakulman koordinaatin.
         //Palkkien leveys on 3/4 osaa välistä
@@ -293,14 +291,18 @@ void piirraPalkit(int sarake) {
       kaavio.textAlign(CENTER); //tekstin asemointi
       kaavio.fill(teksti); //tekstin värin asetus
       String arvo = data.getString(i,sarake); //otetaan arvo
-      if(arvo.length() > 5) { //näytetään vain osa desimaaleista
-        arvo = arvo.substring(0,4); 
+      if(arvo != null) {  
+        if(arvo.length() > 5) { //näytetään vain osa desimaaleista
+          arvo = arvo.substring(0,4); 
+        }
+      } else {
+        arvo = "0";
       }
       if(data.getFloat(i,sarake) > 0) { //tulostetaan arvo vain, jos se on positiivinen eli dataa on
-        kaavio.text(arvo,i*vali+vali/2*3/4,korkeus-alamarg-map(data.getFloat(i, sarake),min,maks,alamarg,korkeus-2*alamarg)-5);
+        kaavio.text(arvo,i*vali+vali/2*3/4,displayHeight-alamarg-map(data.getFloat(i, sarake),min,maks,alamarg,displayHeight-2*alamarg)-5);
       }
       kaavio.fill(teksti);
-      kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, korkeus-5); //vuosiotsikot alle
+      kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, displayHeight-5); //vuosiotsikot alle
       
    
   }
@@ -310,7 +312,7 @@ void piirraPalkit(int sarake) {
   otsikko.fill(teksti);
   otsikko.textFont(f3);
   otsikko.textAlign(CENTER);
-  otsikko.text(data.getColumnTitle(sarake),leveys/2,50);
+  otsikko.text(data.getColumnTitle(sarake),displayWidth/2,50);
   otsikko.endDraw();
   
 }
@@ -333,29 +335,37 @@ void piirraPalkit(int sarake1, int sarake2) { //samanlainen kuin yhden palkin ta
       kaavio.fill(tayte1);
       kaavio.stroke(viiva1);
       if(data.getFloat(i,sarake1) > 0) {
-        kaavio.rect(i*vali,korkeus-alamarg,i*vali+vali*3/8,korkeus-alamarg-map(data.getFloat(i, sarake1),min1,maks1,20,korkeus-2*alamarg));
+        kaavio.rect(i*vali,displayHeight-alamarg,i*vali+vali*3/8,displayHeight-alamarg-map(data.getFloat(i, sarake1),min1,maks1,20,displayHeight-2*alamarg));
       }      
       arvo = data.getString(i,sarake1);
-      if(arvo.length() > 5) {
-        arvo = arvo.substring(0,4); 
+      if(arvo != null) {
+        if(arvo.length() > 5) {
+          arvo = arvo.substring(0,4); 
+        }
+      } else {
+        arvo = "0";
       }
       if(data.getFloat(i,sarake1) > 0) {  
-        kaavio.text(arvo,i*vali+vali/2*3/8,korkeus-alamarg-map(data.getFloat(i, sarake1),min1,maks1,alamarg,korkeus-2*alamarg)-5);
+        kaavio.text(arvo,i*vali+vali/2*3/8,displayHeight-alamarg-map(data.getFloat(i, sarake1),min1,maks1,alamarg,displayHeight-2*alamarg)-5);
       }
       kaavio.fill(tayte2);
       kaavio.stroke(viiva2);
       if(data.getFloat(i,sarake2) > 0) {
-        kaavio.rect(i*vali+vali*3/8,korkeus-alamarg,i*vali+vali*3/4,korkeus-alamarg-map(data.getFloat(i, sarake2),min2,maks2,20,korkeus-2*alamarg));
+        kaavio.rect(i*vali+vali*3/8,displayHeight-alamarg,i*vali+vali*3/4,displayHeight-alamarg-map(data.getFloat(i, sarake2),min2,maks2,20,displayHeight-2*alamarg));
       }
       arvo = data.getString(i,sarake2);
-      if(arvo.length() > 5) {
-        arvo = arvo.substring(0,4); 
+      if (arvo != null) {
+        if(arvo.length() > 5) {
+          arvo = arvo.substring(0,4); 
+        }
+      } else {
+        arvo = "0";
       }
       if(data.getFloat(i,sarake2) > 0) {
-      kaavio.text(arvo,i*vali+vali*3/6,korkeus-alamarg-map(data.getFloat(i, sarake2),min2,maks2,alamarg,korkeus-2*alamarg)-5);
+      kaavio.text(arvo,i*vali+vali*3/6,displayHeight-alamarg-map(data.getFloat(i, sarake2),min2,maks2,alamarg,displayHeight-2*alamarg)-5);
       }
       kaavio.fill(teksti);
-      kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, korkeus-5);
+      kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, displayHeight-5);
          
   }
   kaavio.endDraw();
@@ -364,9 +374,9 @@ void piirraPalkit(int sarake1, int sarake2) { //samanlainen kuin yhden palkin ta
   otsikko.textFont(f3);
   otsikko.textAlign(CENTER);
   otsikko.fill(tayte1);
-  otsikko.text(data.getColumnTitle(sarake1) + " and",leveys/2,50);
+  otsikko.text(data.getColumnTitle(sarake1) + " and",displayWidth/2,50);
   otsikko.fill(tayte2);
-  otsikko.text(data.getColumnTitle(sarake2),leveys/2,100);
+  otsikko.text(data.getColumnTitle(sarake2),displayWidth/2,100);
   otsikko.endDraw();
   
 }
@@ -390,17 +400,17 @@ void piirraXY(int sarake1, int sarake2) {
   for (int i = 0; i < x.size(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
     kaavio.fill(tayte1);    
     //Piirretään piste, arvot skaalattu näytölle koordinaateiksi map-funktiolla
-    kaavio.ellipse(map(x.get(i),x.min(),x.max(),0,leveys), korkeus - map(y.get(i),y.min(),y.max(),0,korkeus),koko,koko);
+    kaavio.ellipse(map(x.get(i),x.min(),x.max(),0,displayWidth), displayHeight - map(y.get(i),y.min(),y.max(),0,displayHeight),koko,koko);
   }
 
   //Piirretään akselien otsikot
   kaavio.textFont(f3);
   kaavio.textAlign(CENTER);
   kaavio.fill(teksti);
-  kaavio.text(data.getColumnTitle(sarake1),leveys/2, korkeus-10); //x-akselin otsikko  
+  kaavio.text(data.getColumnTitle(sarake1),displayWidth/2, displayHeight-10); //x-akselin otsikko  
   kaavio.pushMatrix(); //lisätään objektiin muutosmatriisi
   kaavio.rotate(3*HALF_PI);  //pyöritetään koko kuvaa 90 astetta
-  kaavio.text(data.getColumnTitle(sarake2),-korkeus/2,30); //y-akseli
+  kaavio.text(data.getColumnTitle(sarake2),-displayHeight/2,30); //y-akseli
   kaavio.popMatrix(); //poistetaan muutosmatriisi, jolloin kuva kääntyy takaisin
 
   kaavio.endDraw();  
@@ -409,8 +419,8 @@ void piirraXY(int sarake1, int sarake2) {
   otsikko.textFont(f3);
   otsikko.textAlign(CENTER);
   otsikko.fill(teksti);
-  otsikko.text(data.getColumnTitle(sarake1) + " vs.",leveys/2,50);
-  otsikko.text(data.getColumnTitle(sarake2),leveys/2,100);
+  otsikko.text(data.getColumnTitle(sarake1) + " vs.",displayWidth/2,50);
+  otsikko.text(data.getColumnTitle(sarake2),displayWidth/2,100);
   otsikko.endDraw();
   
   
@@ -430,7 +440,7 @@ void piirraViiva(int sarake) { //samantapainen kuin palkin piirto
   for (int i = 0; i < data.getRowCount(); i++) { //käydään läpi data rivi kerrallaan, kunnes rivejä ei enää ole
     kaavio.stroke(viiva1);
     if(data.getFloat(i,sarake) > 0) {    
-      kaavio.vertex(i*vali,korkeus-map(data.getFloat(i,sarake),min,maks,alamarg,korkeus-2*alamarg));
+      kaavio.vertex(i*vali,displayHeight-map(data.getFloat(i,sarake),min,maks,alamarg,displayHeight-2*alamarg));
       //vertex piirtää viivaa aina edellisestä koordinaatistaan seuraavaksi annettuun. Koordinaatit annetaan siis yksitellen.
     }
   }
@@ -442,13 +452,17 @@ void piirraViiva(int sarake) { //samantapainen kuin palkin piirto
       kaavio.textAlign(CENTER);
       kaavio.fill(teksti);
       String arvo = data.getString(i,sarake);
-      if(arvo.length() > 5) {
-        arvo = arvo.substring(0,4); 
+      if(arvo != null) {  
+        if(arvo.length() > 5) {
+          arvo = arvo.substring(0,4); 
+        }
+      } else {
+        arvo = "0";
       }
       if(data.getFloat(i,sarake) > 0) {
-        kaavio.text(arvo,i*vali+vali/2*3/4,korkeus-map(data.getFloat(i, sarake), min,maks,alamarg,korkeus-alamarg)-5);
+        kaavio.text(arvo,i*vali+vali/2*3/4,displayHeight-map(data.getFloat(i, sarake), min,maks,alamarg,displayHeight-alamarg)-5);
       }
-      kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, korkeus-5);
+      kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, displayHeight-5);
   }
   kaavio.endDraw();
 
@@ -456,7 +470,7 @@ void piirraViiva(int sarake) { //samantapainen kuin palkin piirto
   otsikko.textFont(f3);
   otsikko.textAlign(CENTER);
   otsikko.fill(teksti);
-  otsikko.text(data.getColumnTitle(sarake),leveys/2,50);
+  otsikko.text(data.getColumnTitle(sarake),displayWidth/2,50);
   otsikko.endDraw();
 
 }
@@ -476,7 +490,7 @@ void piirraViiva(int sarake1, int sarake2) {
     //Piirretään viiva
     kaavio.stroke(viiva1);
     if(data.getFloat(i,sarake1) > 0) {
-      kaavio.vertex(i*vali,korkeus-map(data.getFloat(i,sarake1),min1,maks1,alamarg,korkeus-alamarg));
+      kaavio.vertex(i*vali,displayHeight-map(data.getFloat(i,sarake1),min1,maks1,alamarg,displayHeight-alamarg));
     }
   }
   kaavio.endShape();
@@ -486,7 +500,7 @@ void piirraViiva(int sarake1, int sarake2) {
     //Piirretään viiva
     kaavio.stroke(viiva2);
     if(data.getFloat(i,sarake2) > 0) {
-      kaavio.vertex(i*vali,korkeus-map(data.getFloat(i,sarake2),min2,maks2,alamarg,korkeus-alamarg));
+      kaavio.vertex(i*vali,displayHeight-map(data.getFloat(i,sarake2),min2,maks2,alamarg,displayHeight-alamarg));
     }
   }
   kaavio.endShape();
@@ -497,22 +511,31 @@ void piirraViiva(int sarake1, int sarake2) {
       kaavio.textAlign(CENTER);
       kaavio.fill(viiva1,255);
       String arvo = data.getString(i,sarake1);
-      if(arvo.length() > 5) {
-        arvo = arvo.substring(0,4); 
+      if(arvo != null) {        
+         if(arvo.length() > 5) {
+           arvo = arvo.substring(0,4); 
+         } 
+      }else {
+         arvo = "0";
       }
+         
       if(data.getFloat(i,sarake1) > 0) {
-        kaavio.text(arvo,i*vali+vali/2*3/4,korkeus-map(data.getFloat(i, sarake1), min1,maks1,alamarg,korkeus-alamarg)-5);
+        kaavio.text(arvo,i*vali+vali/2*3/4,displayHeight-map(data.getFloat(i, sarake1), min1,maks1,alamarg,displayHeight-alamarg)-5);
       }
       kaavio.fill(viiva2,255);
       arvo = data.getString(i,sarake2);
-      if(arvo.length() > 5) {
-        arvo = arvo.substring(0,4); 
+      if(arvo != null) {        
+        if(arvo.length() > 5) {
+          arvo = arvo.substring(0,4); 
+        }
+      } else {
+        arvo = "0";
       }
       if(data.getFloat(i,sarake2) > 0) {
-        kaavio.text(arvo,i*vali+vali/2*3/4,korkeus-map(data.getFloat(i, sarake2), min2,maks2,alamarg,korkeus-alamarg)-5);
+        kaavio.text(arvo,i*vali+vali/2*3/4,displayHeight-map(data.getFloat(i, sarake2), min2,maks2,alamarg,displayHeight-alamarg)-5);
       }
       kaavio.fill(teksti);
-      kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, korkeus-5);
+      kaavio.text(data.getString(i, 0),i*vali+vali/2*3/4, displayHeight-5);
   }
 
 
@@ -521,9 +544,9 @@ void piirraViiva(int sarake1, int sarake2) {
   otsikko.textFont(f3);
   otsikko.textAlign(CENTER);
   otsikko.fill(tayte1);
-  otsikko.text(data.getColumnTitle(sarake1) + " and",leveys/2,50);
+  otsikko.text(data.getColumnTitle(sarake1) + " and",displayWidth/2,50);
   otsikko.fill(tayte2);
-  otsikko.text(data.getColumnTitle(sarake2),leveys/2,100);
+  otsikko.text(data.getColumnTitle(sarake2),displayWidth/2,100);
   otsikko.endDraw();
 
 }
@@ -560,11 +583,11 @@ void piirraMuutos(int askel, int sarake) { //askel kertoo, kuinka pitkää aikav
   String muutos_lyh = String.format("%.2f", muutos); //vähennetään muutoksen desimaalit kahteen
   
   //tulostetaan teksit näytölle
-  kaavio.text("The biggest change over " + askel + " year time range in",leveys/2,50);
-  kaavio.text(label,leveys/2,100);
-  kaavio.text("happened from " + data.getString(indeksi,0) + " to " + data.getString(indeksi+askel,0) + ": ",leveys/2,150);
-  kaavio.text(muutos_lyh + " " + suure + ".",leveys/2,200);
-  kaavio.text("The president of the United States was " + data.getString(indeksi,0),leveys/2,250);
+  kaavio.text("The biggest change over " + askel + " year time range in",displayWidth/2,50);
+  kaavio.text(label,displayWidth/2,100);
+  kaavio.text("happened from " + data.getString(indeksi,0) + " to " + data.getString(indeksi+askel,0) + ": ",displayWidth/2,150);
+  kaavio.text(muutos_lyh + " " + suure + ".",displayWidth/2,200);
+  kaavio.text("The president of the United States was " + data.getString(indeksi,9),displayWidth/2,250);
 
   kaavio.endDraw();
 
@@ -596,23 +619,23 @@ void piirraHistogram(int sarake) {
     
   kaavio.beginDraw();
   kaavio.rectMode(CORNERS);
-  float binLeveys = (leveys-2*marg)/hist.getNumBins(); //lasketaan, kuinka leveitä palkit ovat näytöllä
+  float binLeveys = (displayWidth-2*marg)/hist.getNumBins(); //lasketaan, kuinka leveitä palkit ovat näytöllä
   for(int i = 0; i < frek.length; i++) { //piirretään palkit
       kaavio.fill(tayte1);
       kaavio.stroke(viiva1);
-      kaavio.rect(i*binLeveys,korkeus-alamarg,i*binLeveys+binLeveys*3/4,korkeus-alamarg-map(frek[i],0,frekmaks,alamarg,korkeus-2*alamarg-100));
+      kaavio.rect(i*binLeveys,displayHeight-alamarg,i*binLeveys+binLeveys*3/4,displayHeight-alamarg-map(frek[i],0,frekmaks,alamarg,displayHeight-2*alamarg-100));
       kaavio.textFont(f);
       kaavio.textAlign(CENTER);
       kaavio.fill(teksti);      
-      kaavio.text(round(frek[i]),i*binLeveys+binLeveys/2*3/4,korkeus-alamarg-map(frek[i],0,frekmaks,alamarg,korkeus-2*alamarg-100)-5);
-      kaavio.text(String.format("%.1f",min+i*lev) + "-" + String.format("%.1f",min+(i+1)*lev),i*binLeveys+binLeveys/2*3/4, korkeus-5);
+      kaavio.text(round(frek[i]),i*binLeveys+binLeveys/2*3/4,displayHeight-alamarg-map(frek[i],0,frekmaks,alamarg,displayHeight-2*alamarg-100)-5);
+      kaavio.text(String.format("%.1f",min+i*lev) + "-" + String.format("%.1f",min+(i+1)*lev),i*binLeveys+binLeveys/2*3/4, displayHeight-5);
   }
   kaavio.endDraw();
   otsikko.beginDraw();
   otsikko.textFont(f3);
   otsikko.textAlign(CENTER);
   otsikko.fill(teksti);
-  otsikko.text("Histogram of " + data.getColumnTitle(sarake),leveys/2,50);
+  otsikko.text("Histogram of " + data.getColumnTitle(sarake),displayWidth/2,50);
   otsikko.endDraw();
 
 }
@@ -620,14 +643,16 @@ void piirraHistogram(int sarake) {
 /* Korrelaatio */
 void piirraKorrelaatio(int sarake1, int sarake2) {
   nollaaKaavio();
-  FloatList sarakedata1 = new FloatList(data.getFloatColumn(sarake1));
-  FloatList sarakedata2 = new FloatList(data.getFloatColumn(sarake2));
+  FloatList sarakedata1 = new FloatList();
+  FloatList sarakedata2 = new FloatList();
   
-
-  for(int i = 0; i < sarakedata1.size(); i++) {
-    if(sarakedata1.get(i) < 0 || sarakedata2.get(i) < 0) {
-      sarakedata1.remove(i);
-      sarakedata2.remove(i);
+  for(int i = 0; i < data.getRowCount(); i++) {
+    if(Float.isNaN(data.getFloat(i,sarake1)) || Float.isNaN(data.getFloat(i,sarake2))) {
+//      sarakedata1.remove(i);
+//      sarakedata2.remove(i);
+    } else {
+      sarakedata1.append(data.getFloat(i,sarake1));
+      sarakedata2.append(data.getFloat(i,sarake2));
     }
   }
   
@@ -655,10 +680,10 @@ void piirraKorrelaatio(int sarake1, int sarake2) {
   kaavio.textFont(f2);
   kaavio.textAlign(CENTER);
   kaavio.fill(teksti);
-  kaavio.text("When " + otsikko1,leveys/2,50);  
-  kaavio.text("increases by 1 " + suure1 + ",",leveys/2,100);
-  kaavio.text("the amount of " + otsikko2,leveys/2,150);
-  kaavio.text(muutos + " by " + String.format("%.2f",slope) + " " + suure2 + ".",leveys/2,200);
+  kaavio.text("When " + otsikko1,displayWidth/2,50);  
+  kaavio.text("increases by 1 " + suure1 + ",",displayWidth/2,100);
+  kaavio.text("the amount of " + otsikko2,displayWidth/2,150);
+  kaavio.text(muutos + " by " + String.format("%.2f",slope) + " " + suure2 + ".",displayWidth/2,200);
   kaavio.endDraw();  
   otsikko.beginDraw();
   otsikko.endDraw();
@@ -779,15 +804,36 @@ void serialEvent(Serial p) {
     }
     if(lasna1 == 1 && lasna2 == 1) { //molemmat läsnä
       montako = 2;
-    } else if(lasna1 == 1 || lasna2 == 1) { //toinen läsnä
+//      lueRFIDarvo(rfid1);
+//      lueRFIDarvo(rfid2);
+    } else if(lasna1 == 1) { //toinen läsnä
       montako = 1;
+//      lueRFIDarvo(rfid1);      
+    } else if(lasna2 == 1) { //toinen läsnä
+      montako = 1;
+//      lueRFIDarvo(rfid2);
     } else { //ei kortteja
       montako = 0;
     }
+    
+    
+
   }
 
   fadeOut = true; //jotain muuttui, joten thedään fadeout, josta puolestaan kutsutaan keissinarvontaa
 } 
   
-  
+void lueRFIDarvo(Serial port) {
+  String rfidArvo = port.readStringUntil(lf);  //luetaan
+  rfidArvo = trim(rfidArvo);  //poistetaan välilyönnit
+  for(int i = 0;i < tagit.length; i++) { //käydään kortit läpi
+    if(rfidArvo.equals(tagit[i])) { //jos löytyy sama tunnus
+      if(port == rfid1) {
+        y1 = i+1; //asetetaan valittavaksi dataksi oikea sarakkeen numero. Sarakkeen indeksi alkaa ykkösestä, i niollasta, siksi täytyy lisätä ykkönen
+      } else {
+        y2 = i+1;       
+      }
+    }
+  }
+}
 
