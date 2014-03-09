@@ -77,14 +77,15 @@ void setup() {
   println(Serial.list()); 
   rfid1 = new Serial(this, Serial.list()[2], 9600); 
   rfid1.bufferUntil(lf); 
-  rfid2 = new Serial(this, Serial.list()[4], 9600); 
+  rfid2 = new Serial(this, Serial.list()[3], 9600); 
   rfid2.bufferUntil(lf); 
-  arduino = new Serial(this, Serial.list()[0], 9600); 
+  arduino = new Serial(this, Serial.list()[1], 9600); 
   arduino.bufferUntil(lf); 
 }
 
 void draw() {
-if(valitseKeissi) { //esine lisätty tai poistettu
+
+  if(valitseKeissi) { //esine lisätty tai poistettu
   switch(keissi) { 
     /* taukoanimaatio */
     case 0: 
